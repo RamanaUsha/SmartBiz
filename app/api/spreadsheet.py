@@ -1,0 +1,127 @@
+from fastapi import APIRouter, File, HTTPException, UploadFile
+
+from app.services.spreadsheet_service import read_spreadsheet
+from app.services.data_cleaning_service import clean_whitespace
+from app.services.data_quality_service import (
+    generate_data_overview,
+    generate_missing_value_report,
+    generate_duplicate_report,
+    generate_invalid_email_report,
+    calculate_data_quality_score
+)
+
+
+router = APIRouter(
+    prefix="/spreadsheets",
+    tags=["Spreadsheets"]
+)
+
+
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+
+
+@router.post("/upload")
+async def upload_spreadsheet(file: UploadFile = File(...)):
+    """
+    Upload a CSV or XLSX spreadsheet and generate
+    a data quality report.
+    """
+
+    if not file.filename:
+        raise HTTPException(
+            status_code=400,
+            detail="No file was selected"
+        )
+
+    file_extension = file.filename.lower().rsplit(".", 1)[-1]
+
+    if file_extension not in ["csv", "xlsx"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file format. Please upload CSV or XLSX."
+        )
+
+    file_content = await file.read(MAX_FILE_SIZE + 1)
+
+    if len(file_content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="File size exceeds the maximum limit of 5 MB"
+        )
+
+    if not file_content:
+        raise HTTPException(
+            status_code=400,
+            detail="The uploaded file is empty"
+        )
+
+    try:
+        dataframe = read_spreadsheet(
+            file.filename,
+            file_content
+        )
+
+        if dataframe.empty or len(dataframe.columns) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="The spreadsheet contains no data"
+            )
+
+        required_columns = ["name", "email"]
+
+        missing_columns = [
+            column
+            for column in required_columns
+            if column not in dataframe.columns
+        ]
+
+        if missing_columns:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Missing required columns: {missing_columns}"
+            )
+
+        cleaned_dataframe = clean_whitespace(dataframe)
+
+        overview = generate_data_overview(cleaned_dataframe)
+
+        missing_report = generate_missing_value_report(
+            cleaned_dataframe
+        )
+
+        duplicate_report = generate_duplicate_report(
+            cleaned_dataframe,
+            ["email"]
+        )
+
+        invalid_email_report = generate_invalid_email_report(
+            cleaned_dataframe,
+            "email"
+        )
+
+        quality_score = calculate_data_quality_score(
+            cleaned_dataframe,
+            ["email"],
+            "email"
+        )
+
+        return {
+            "message": "Spreadsheet processed successfully",
+            "overview": overview,
+            "missing_value_report": missing_report,
+            "duplicate_report": duplicate_report,
+            "invalid_email_report": invalid_email_report,
+            "data_quality_score": quality_score
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unable to process spreadsheet: {str(error)}"
+        )
+
+    finally:
+        await file.close()

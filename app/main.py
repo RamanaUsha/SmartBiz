@@ -1,5 +1,8 @@
 from fastapi import FastAPI
+
 from app.api.customer import router as customer_router
+from app.api.spreadsheet import router as spreadsheet_router
+
 
 app = FastAPI(
     title="SmartBiz API",
@@ -8,6 +11,7 @@ app = FastAPI(
 )
 
 app.include_router(customer_router)
+app.include_router(spreadsheet_router)
 
 
 @app.get("/")
