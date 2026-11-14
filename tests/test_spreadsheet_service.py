@@ -8,6 +8,7 @@ from app.services.spreadsheet_service import read_spreadsheet
 from app.services.data_cleaning_service import detect_missing_values
 from app.services.data_cleaning_service import detect_duplicates
 from app.services.data_cleaning_service import detect_invalid_emails
+from app.services.excel_export_service import export_cleaned_excel
 
 def test_read_csv_file():
     content = b"name,email\nUsha,usha@gmail.com\n"
@@ -116,3 +117,120 @@ def test_detect_invalid_emails_missing_column():
 
     with pytest.raises(ValueError):
         detect_invalid_emails(dataframe, "email")
+
+from app.services.data_cleaning_service import clean_dataframe
+
+
+def test_clean_dataframe_trims_whitespace():
+    dataframe = pd.DataFrame({
+        "name": [" Usha ", " Ravi "],
+        "email": [" usha@gmail.com ", " ravi@gmail.com "]
+    })
+
+    cleaned = clean_dataframe(dataframe)
+
+    assert cleaned["name"].tolist() == ["Usha", "Ravi"]
+    assert cleaned["email"].tolist() == [
+        "usha@gmail.com",
+        "ravi@gmail.com"
+    ]
+
+
+def test_clean_dataframe_removes_duplicates():
+    dataframe = pd.DataFrame({
+        "name": ["Usha", "Ravi", "Usha"],
+        "email": [
+            "usha@gmail.com",
+            "ravi@gmail.com",
+            "usha@gmail.com"
+        ]
+    })
+
+    cleaned = clean_dataframe(
+        dataframe,
+        remove_duplicates=True,
+        duplicate_columns=["email"]
+    )
+
+    assert len(cleaned) == 2
+
+
+def test_clean_dataframe_fills_missing_values():
+    dataframe = pd.DataFrame({
+        "name": ["Usha", None],
+        "city": ["Chittoor", None]
+    })
+
+    cleaned = clean_dataframe(
+        dataframe,
+        fill_missing_values={
+            "name": "Unknown",
+            "city": "Not Provided"
+        }
+    )
+
+    assert cleaned["name"].tolist() == ["Usha", "Unknown"]
+    assert cleaned["city"].tolist() == [
+        "Chittoor",
+        "Not Provided"
+    ]
+
+
+def test_clean_dataframe_preserves_original():
+    dataframe = pd.DataFrame({
+        "name": [" Usha ", " Usha "],
+        "email": ["usha@gmail.com", "usha@gmail.com"]
+    })
+
+    original = dataframe.copy(deep=True)
+
+    clean_dataframe(
+        dataframe,
+        remove_duplicates=True,
+        duplicate_columns=["email"]
+    )
+
+    pd.testing.assert_frame_equal(dataframe, original)
+
+def test_export_cleaned_excel_successfully():
+    dataframe = pd.DataFrame({
+        "name": ["Usha", "Ravi"],
+        "email": ["usha@gmail.com", "ravi@gmail.com"]
+    })
+
+    excel_content = export_cleaned_excel(dataframe)
+
+    assert isinstance(excel_content, bytes)
+    assert len(excel_content) > 0
+
+    exported_dataframe = pd.read_excel(
+        BytesIO(excel_content),
+        engine="openpyxl"
+    )
+
+    assert exported_dataframe["name"].tolist() == ["Usha", "Ravi"]
+    assert exported_dataframe["email"].tolist() == [
+        "usha@gmail.com",
+        "ravi@gmail.com"
+    ]
+
+
+def test_export_cleaned_excel_preserves_columns():
+    dataframe = pd.DataFrame({
+        "name": ["Usha"],
+        "email": ["usha@gmail.com"],
+        "city": ["Chittoor"]
+    })
+
+    excel_content = export_cleaned_excel(dataframe)
+
+    exported_dataframe = pd.read_excel(
+        BytesIO(excel_content),
+        engine="openpyxl"
+    )
+
+    assert exported_dataframe.columns.tolist() == [
+        "name",
+        "email",
+        "city"
+    ]
