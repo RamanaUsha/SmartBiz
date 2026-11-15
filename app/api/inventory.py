@@ -1,12 +1,14 @@
 import pandas as pd
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 
+from app.models.user_db import UserDB
 from app.services.inventory_service import (
     calculate_inventory_value,
     detect_low_stock,
     generate_inventory_summary
 )
+from app.utils.auth import get_current_user
 
 
 router = APIRouter(
@@ -16,9 +18,13 @@ router = APIRouter(
 
 
 @router.post("/analyze")
-def analyze_inventory(records: list[dict] = Body(...)):
+def analyze_inventory(
+    records: list[dict] = Body(...),
+    current_user: UserDB = Depends(get_current_user)
+):
     """
     Analyze inventory records and return stock information.
+    Requires JWT authentication.
     """
 
     try:

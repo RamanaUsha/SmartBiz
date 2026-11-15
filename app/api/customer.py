@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -7,10 +8,13 @@ from app.models.customer import (
     CustomerListResponse,
     CustomerCreateResponse
 )
+from app.models.user_db import UserDB
 from app.services.customer_service import (
     process_customer,
     get_all_customers
 )
+from app.utils.auth import get_current_user
+
 
 router = APIRouter(
     prefix="/customers",
@@ -30,7 +34,8 @@ router = APIRouter(
 )
 def create_customer(
     customer: CustomerCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserDB = Depends(get_current_user)
 ):
     try:
         processed_customer = process_customer(customer, db)
@@ -48,7 +53,10 @@ def create_customer(
 
 
 @router.get("/", response_model=CustomerListResponse)
-def list_customers(db: Session = Depends(get_db)):
+def list_customers(
+    db: Session = Depends(get_db),
+    current_user: UserDB = Depends(get_current_user)
+):
     customers = get_all_customers(db)
 
     return {

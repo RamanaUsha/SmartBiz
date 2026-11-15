@@ -1,13 +1,31 @@
+
 from io import BytesIO
 
 import pandas as pd
-import pytest
-from fastapi.testclient import TestClient
-
-from app.main import app
 
 
-client = TestClient(app)
+def get_auth_headers(client):
+    client.post(
+        "/auth/register",
+        json={
+            "email": "spreadsheet-test@example.com",
+            "password": "SecurePass123!"
+        }
+    )
+
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email": "spreadsheet-test@example.com",
+            "password": "SecurePass123!"
+        }
+    )
+
+    token = login_response.json()["access_token"]
+
+    return {
+        "Authorization": f"Bearer {token}"
+    }
 
 
 def create_csv_file():
@@ -54,9 +72,12 @@ def create_excel_file():
     }
 
 
-def test_upload_csv_successfully():
+def test_upload_csv_successfully(client):
+    headers = get_auth_headers(client)
+
     response = client.post(
         "/spreadsheets/upload",
+        headers=headers,
         files=create_csv_file()
     )
 
@@ -73,9 +94,12 @@ def test_upload_csv_successfully():
     assert result["data_quality_score"] == 81.67
 
 
-def test_upload_excel_successfully():
+def test_upload_excel_successfully(client):
+    headers = get_auth_headers(client)
+
     response = client.post(
         "/spreadsheets/upload",
+        headers=headers,
         files=create_excel_file()
     )
 
@@ -88,9 +112,12 @@ def test_upload_excel_successfully():
     assert result["data_quality_score"] == 100.0
 
 
-def test_upload_unsupported_file_format():
+def test_upload_unsupported_file_format(client):
+    headers = get_auth_headers(client)
+
     response = client.post(
         "/spreadsheets/upload",
+        headers=headers,
         files={
             "file": (
                 "test.txt",
@@ -104,9 +131,12 @@ def test_upload_unsupported_file_format():
     assert "Unsupported file format" in response.json()["detail"]
 
 
-def test_upload_empty_file():
+def test_upload_empty_file(client):
+    headers = get_auth_headers(client)
+
     response = client.post(
         "/spreadsheets/upload",
+        headers=headers,
         files={
             "file": (
                 "empty.csv",
@@ -120,7 +150,9 @@ def test_upload_empty_file():
     assert response.json()["detail"] == "The uploaded file is empty"
 
 
-def test_upload_file_with_missing_columns():
+def test_upload_file_with_missing_columns(client):
+    headers = get_auth_headers(client)
+
     content = (
         "name,city\n"
         "Usha,Chittoor\n"
@@ -129,6 +161,7 @@ def test_upload_file_with_missing_columns():
 
     response = client.post(
         "/spreadsheets/upload",
+        headers=headers,
         files={
             "file": (
                 "missing_columns.csv",
@@ -142,11 +175,14 @@ def test_upload_file_with_missing_columns():
     assert "Missing required columns" in response.json()["detail"]
 
 
-def test_upload_file_exceeding_size_limit():
+def test_upload_file_exceeding_size_limit(client):
+    headers = get_auth_headers(client)
+
     large_content = b"a" * (5 * 1024 * 1024 + 1)
 
     response = client.post(
         "/spreadsheets/upload",
+        headers=headers,
         files={
             "file": (
                 "large.csv",
@@ -158,3 +194,12 @@ def test_upload_file_exceeding_size_limit():
 
     assert response.status_code == 413
     assert "5 MB" in response.json()["detail"]
+
+
+def test_upload_without_token(client):
+    response = client.post(
+        "/spreadsheets/upload",
+        files=create_csv_file()
+    )
+
+    assert response.status_code == 401

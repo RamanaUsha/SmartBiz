@@ -1,5 +1,5 @@
 
-# SmartBiz – Business Data Automation Platform
+# SmartBiz - Business Data Automation Platform
 
 SmartBiz is a Python-based business data automation and analytics platform designed to help small businesses process, clean, validate, compare, and analyze their business data.
 
@@ -13,6 +13,7 @@ The platform provides REST APIs and an interactive dashboard for managing custom
 - Detect duplicate customer email addresses.
 - Store customer records in PostgreSQL.
 - Retrieve stored customer records.
+- Protect customer endpoints using JWT authentication.
 
 ### 2. Spreadsheet Processing
 - Import CSV and Excel files.
@@ -22,6 +23,7 @@ The platform provides REST APIs and an interactive dashboard for managing custom
 - Detect duplicate records.
 - Identify invalid email addresses.
 - Validate uploaded file formats and sizes.
+- Require authentication for spreadsheet operations.
 
 ### 3. Data Quality Analysis
 - Generate spreadsheet data overview reports.
@@ -44,7 +46,7 @@ The platform provides REST APIs and an interactive dashboard for managing custom
 - Count modified cells.
 - Record cleaning operations.
 - Store audit history in PostgreSQL.
-- Retrieve audit records through REST APIs.
+- Retrieve audit records through protected REST APIs.
 
 ### 6. Sales Management
 - Validate sales records and required columns.
@@ -67,10 +69,20 @@ The platform provides REST APIs and an interactive dashboard for managing custom
 - Display total revenue and order counts.
 - Display total quantity sold.
 - Calculate total inventory value.
-- Identify top five selling products.
+- Identify the top five selling products.
 - Generate low-stock alerts.
 - Provide an interactive HTML, CSS, and JavaScript dashboard.
 - Connect the dashboard directly to the FastAPI analytics endpoint.
+
+### 9. Authentication and Security
+- Register new users.
+- Authenticate users through email and password.
+- Hash passwords using Argon2.
+- Generate and validate JSON Web Tokens (JWT).
+- Provide a protected account endpoint.
+- Protect customer, spreadsheet, audit, sales, inventory, and analytics APIs.
+- Integrate login, registration, and logout into the dashboard.
+- Require a valid bearer token for protected API operations.
 
 ## Technology Stack
 
@@ -83,6 +95,9 @@ The platform provides REST APIs and an interactive dashboard for managing custom
 | Pydantic | Data validation |
 | Pandas | Data processing and analysis |
 | OpenPyXL | Excel file processing |
+| PyJWT | JWT authentication |
+| pwdlib | Password hashing |
+| Argon2 | Secure password hashing algorithm |
 | Pytest | Automated testing |
 | HTTPX | API testing |
 | HTML | Dashboard structure |
@@ -100,11 +115,14 @@ SmartBiz/
 │   │   ├── audit.py
 │   │   ├── sales.py
 │   │   ├── inventory.py
-│   │   └── analytics.py
+│   │   ├── analytics.py
+│   │   └── auth.py
 │   ├── models/
 │   │   ├── customer.py
 │   │   ├── customer_db.py
-│   │   └── audit_log_db.py
+│   │   ├── audit_log_db.py
+│   │   ├── user.py
+│   │   └── user_db.py
 │   ├── services/
 │   │   ├── customer_service.py
 │   │   ├── spreadsheet_service.py
@@ -115,10 +133,12 @@ SmartBiz/
 │   │   ├── audit_log_service.py
 │   │   ├── sales_service.py
 │   │   ├── inventory_service.py
-│   │   └── analytics_service.py
+│   │   ├── analytics_service.py
+│   │   └── auth_service.py
 │   ├── static/
 │   │   └── index.html
 │   ├── utils/
+│   │   └── auth.py
 │   ├── database.py
 │   ├── init_db.py
 │   └── main.py
@@ -135,14 +155,12 @@ SmartBiz/
 
 ### 1. Clone the Repository
 
-```bash
+```powershell
 git clone https://github.com/RamanaUsha/SmartBiz.git
 cd SmartBiz
 ```
 
 ### 2. Create a Virtual Environment
-
-Windows PowerShell:
 
 ```powershell
 python -m venv .venv
@@ -157,17 +175,31 @@ pip install -r requirements.txt
 
 ### 4. Configure Environment Variables
 
-Create a `.env` file in the project root:
+Create a `.env` file in the project root.
+
+Add the following configuration:
 
 ```env
 DATABASE_URL=postgresql+psycopg2://postgres:YOUR_PASSWORD@localhost:5432/smartbiz_db
+
+JWT_SECRET_KEY=YOUR_GENERATED_SECRET
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
+
+Generate a secure JWT secret locally using:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Copy the generated value into `JWT_SECRET_KEY` in your local `.env` file.
 
 Replace `YOUR_PASSWORD` with your local PostgreSQL password.
 
 Create a PostgreSQL database named `smartbiz_db` before proceeding.
 
-Do not commit your `.env` file to GitHub.
+**Security:** Never commit your `.env` file or share your database password or JWT secret.
 
 ### 5. Initialize the Database
 
@@ -192,6 +224,18 @@ uvicorn app.main:app --reload
 
 ## API Endpoints
 
+### Authentication
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/auth/register` | Register a new user |
+| POST | `/auth/login` | Authenticate and receive a JWT |
+| GET | `/auth/me` | Retrieve the authenticated user's account |
+
+### Business APIs
+
+All business API endpoints below require a valid bearer token.
+
 | Method | Endpoint | Description |
 |---|---|---|
 | POST | `/customers/` | Create a customer |
@@ -203,18 +247,37 @@ uvicorn app.main:app --reload
 | POST | `/inventory/analyze` | Analyze inventory records |
 | POST | `/analytics/business-overview` | Generate combined business analytics |
 
+## Authentication Workflow
+
+1. Register a user using `POST /auth/register`.
+2. Log in using `POST /auth/login`.
+3. Receive an access token.
+4. Include the token in protected API requests:
+
+```http
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+5. Access the protected account endpoint using `GET /auth/me`.
+
+Access tokens expire according to `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`.
+
+The dashboard keeps the access token in memory. Refreshing the page requires logging in again.
+
 ## Business Analytics Dashboard
 
 The SmartBiz dashboard provides a visual interface for analyzing business data.
 
 ### Dashboard Capabilities
 
+- Register and log in.
 - Enter sales and inventory records as JSON.
-- Generate business analytics through the API.
+- Generate business analytics through the authenticated API.
 - View total revenue and orders.
 - Monitor inventory value.
 - Identify top-selling products.
 - Review low-stock alerts.
+- Log out of the dashboard.
 
 ### Running the Dashboard
 
@@ -224,7 +287,7 @@ Start the FastAPI application:
 uvicorn app.main:app --reload
 ```
 
-Open the dashboard:
+Open:
 
 http://127.0.0.1:8000/dashboard
 
@@ -240,33 +303,48 @@ Run the complete test suite:
 pytest -v
 ```
 
-### Current Test Results
+### Latest Test Results
 
-- Total automated tests: 75
-- Passed: 75
+- Total automated tests: 93
+- Passed: 93
 - Failed: 0
 
-All 75 tests passed during the latest full test run.
+All 93 tests passed during the latest full test run.
+
+A non-blocking Starlette deprecation warning related to HTTPX and TestClient was observed during testing.
 
 ## Development Roadmap
 
-The following enhancements are planned for future development:
-
-- User authentication and authorization.
-- Role-based access control.
-- Improved API security.
-- Dashboard enhancements and visual charts.
-- Docker-based deployment.
-- Production deployment and monitoring.
-- Additional business reporting capabilities.
+| Milestone | Description | Status |
+|---|---|---|
+| 1 | Customer API and database | Completed |
+| 2 | Spreadsheet reading and cleaning | Completed |
+| 3 | Data quality reporting | Completed |
+| 4 | Spreadsheet upload API | Completed |
+| 5 | Advanced cleaning and Excel export | Completed |
+| 6 | Data comparison and audit logs | Completed |
+| 7 | Sales and inventory processing | Completed |
+| 8 | Business analytics and dashboard | Completed |
+| 9 | Authentication and security improvements | Completed |
+| 10 | Deployment, documentation, and portfolio preparation | In progress |
 
 ## Project Status
 
-**Completed development milestones: 8 of 10**
+**Completed development milestones: 9 of 10 (90% of the proposed roadmap).**
 
-The project currently includes customer management, spreadsheet processing, data quality analysis, automated cleaning, audit logging, sales and inventory processing, and business analytics.
+SmartBiz currently includes customer management, spreadsheet processing, data quality analysis, automated cleaning, audit logging, sales and inventory processing, business analytics, an interactive dashboard, and JWT-based authentication.
 
-Authentication, security improvements, deployment, and further production hardening remain future development tasks.
+Deployment and additional production-readiness improvements remain to be completed.
+
+## Future Improvements
+
+- Role-based access control.
+- Password reset and account recovery.
+- Rate limiting and additional API security.
+- Improved dashboard charts and reporting.
+- Docker-based deployment.
+- Production deployment and monitoring.
+- Additional business reporting capabilities.
 
 ## Author
 

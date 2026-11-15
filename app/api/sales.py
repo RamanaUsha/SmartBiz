@@ -1,12 +1,13 @@
-
 import pandas as pd
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 
+from app.models.user_db import UserDB
 from app.services.sales_service import (
     calculate_sales_revenue,
     generate_sales_summary
 )
+from app.utils.auth import get_current_user
 
 
 router = APIRouter(
@@ -16,9 +17,13 @@ router = APIRouter(
 
 
 @router.post("/analyze")
-def analyze_sales(records: list[dict] = Body(...)):
+def analyze_sales(
+    records: list[dict] = Body(...),
+    current_user: UserDB = Depends(get_current_user)
+):
     """
     Analyze sales records and return revenue and summary.
+    Requires JWT authentication.
     """
 
     try:

@@ -21,7 +21,8 @@ from app.services.data_quality_service import (
 from app.services.excel_export_service import export_cleaned_excel
 from app.services.data_comparison_service import compare_dataframes
 from app.services.audit_log_service import create_audit_log
-
+from app.models.user_db import UserDB
+from app.utils.auth import get_current_user
 
 router = APIRouter(
     prefix="/spreadsheets",
@@ -32,7 +33,10 @@ MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 
 
 @router.post("/upload")
-async def upload_spreadsheet(file: UploadFile = File(...)):
+async def upload_spreadsheet(
+    file: UploadFile = File(...),
+    current_user: UserDB = Depends(get_current_user)
+):
     """
     Upload a CSV or XLSX spreadsheet and generate
     a data quality report.
@@ -142,7 +146,8 @@ async def upload_spreadsheet(file: UploadFile = File(...)):
 async def clean_and_download_spreadsheet(
     file: UploadFile = File(...),
     remove_duplicates: bool = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserDB = Depends(get_current_user)
 ):
     """
     Upload a CSV or XLSX file, clean its data,

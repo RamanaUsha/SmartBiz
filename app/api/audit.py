@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.user_db import UserDB
 from app.services.audit_log_service import get_audit_logs
+from app.utils.auth import get_current_user
 
 
 router = APIRouter(
@@ -11,7 +13,10 @@ router = APIRouter(
 
 
 @router.get("/audit-logs")
-def list_audit_logs(db: Session = Depends(get_db)):
+def list_audit_logs(
+    db: Session = Depends(get_db),
+    current_user: UserDB = Depends(get_current_user)
+):
     logs = get_audit_logs(db)
 
     return {

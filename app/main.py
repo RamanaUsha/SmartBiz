@@ -9,7 +9,7 @@ from app.api.analytics import router as analytics_router
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-
+from app.api.auth import router as auth_router
 
 app = FastAPI(
     title="SmartBiz API",
@@ -23,6 +23,7 @@ app.include_router(audit_router)
 app.include_router(sales_router)
 app.include_router(inventory_router)
 app.include_router(analytics_router)
+app.include_router(auth_router)
 
 @app.get("/")
 def home():

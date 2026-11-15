@@ -1,4 +1,30 @@
+def get_auth_headers(client):
+    client.post(
+        "/auth/register",
+        json={
+            "email": "inventory-test@example.com",
+            "password": "SecurePass123!"
+        }
+    )
+
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email": "inventory-test@example.com",
+            "password": "SecurePass123!"
+        }
+    )
+
+    token = login_response.json()["access_token"]
+
+    return {
+        "Authorization": f"Bearer {token}"
+    }
+
+
 def test_analyze_inventory_success(client):
+    headers = get_auth_headers(client)
+
     records = [
         {
             "product_id": 101,
@@ -25,7 +51,8 @@ def test_analyze_inventory_success(client):
 
     response = client.post(
         "/inventory/analyze",
-        json=records
+        json=records,
+        headers=headers
     )
 
     assert response.status_code == 200
@@ -46,6 +73,8 @@ def test_analyze_inventory_success(client):
 
 
 def test_analyze_inventory_missing_columns(client):
+    headers = get_auth_headers(client)
+
     records = [
         {
             "product_id": 101,
@@ -55,7 +84,8 @@ def test_analyze_inventory_missing_columns(client):
 
     response = client.post(
         "/inventory/analyze",
-        json=records
+        json=records,
+        headers=headers
     )
 
     assert response.status_code == 400
@@ -63,9 +93,29 @@ def test_analyze_inventory_missing_columns(client):
 
 
 def test_analyze_inventory_empty_records(client):
+    headers = get_auth_headers(client)
+
     response = client.post(
         "/inventory/analyze",
-        json=[]
+        json=[],
+        headers=headers
     )
 
     assert response.status_code == 400
+
+
+def test_analyze_inventory_without_token(client):
+    response = client.post(
+        "/inventory/analyze",
+        json=[
+            {
+                "product_id": 101,
+                "product_name": "Laptop",
+                "quantity": 10,
+                "unit_cost": 40000,
+                "reorder_level": 5
+            }
+        ]
+    )
+
+    assert response.status_code == 401

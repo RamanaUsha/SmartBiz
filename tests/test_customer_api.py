@@ -1,6 +1,34 @@
+
+def get_auth_headers(client):
+    client.post(
+        "/auth/register",
+        json={
+            "email": "customer-test@example.com",
+            "password": "SecurePass123!"
+        }
+    )
+
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email": "customer-test@example.com",
+            "password": "SecurePass123!"
+        }
+    )
+
+    token = login_response.json()["access_token"]
+
+    return {
+        "Authorization": f"Bearer {token}"
+    }
+
+
 def test_create_customer_api(client):
+    headers = get_auth_headers(client)
+
     response = client.post(
         "/customers/",
+        headers=headers,
         json={
             "name": "Usha",
             "email": "usha@gmail.com",
@@ -19,15 +47,22 @@ def test_create_customer_api(client):
 
 
 def test_duplicate_customer_api(client):
+    headers = get_auth_headers(client)
+
     payload = {
         "name": "Usha",
         "email": "usha@gmail.com"
     }
 
-    first_response = client.post("/customers/", json=payload)
+    first_response = client.post(
+        "/customers/",
+        headers=headers,
+        json=payload
+    )
 
     second_response = client.post(
         "/customers/",
+        headers=headers,
         json={
             "name": "Usha R",
             "email": "USHA@GMAIL.COM"
@@ -39,15 +74,21 @@ def test_duplicate_customer_api(client):
 
 
 def test_list_customers_api(client):
+    headers = get_auth_headers(client)
+
     client.post(
         "/customers/",
+        headers=headers,
         json={
             "name": "Usha",
             "email": "usha@gmail.com"
         }
     )
 
-    response = client.get("/customers/")
+    response = client.get(
+        "/customers/",
+        headers=headers
+    )
 
     assert response.status_code == 200
 
@@ -58,8 +99,11 @@ def test_list_customers_api(client):
 
 
 def test_invalid_customer_api(client):
+    headers = get_auth_headers(client)
+
     response = client.post(
         "/customers/",
+        headers=headers,
         json={
             "name": "Usha",
             "email": "invalid-email",
@@ -68,3 +112,21 @@ def test_invalid_customer_api(client):
     )
 
     assert response.status_code == 422
+
+
+def test_create_customer_without_token(client):
+    response = client.post(
+        "/customers/",
+        json={
+            "name": "Usha",
+            "email": "usha@gmail.com"
+        }
+    )
+
+    assert response.status_code == 401
+
+
+def test_list_customers_without_token(client):
+    response = client.get("/customers/")
+
+    assert response.status_code == 401

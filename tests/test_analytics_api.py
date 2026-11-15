@@ -1,9 +1,25 @@
-from fastapi.testclient import TestClient
+def get_auth_headers(client):
+    client.post(
+        "/auth/register",
+        json={
+            "email": "analytics-test@example.com",
+            "password": "SecurePass123!"
+        }
+    )
 
-from app.main import app
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email": "analytics-test@example.com",
+            "password": "SecurePass123!"
+        }
+    )
 
+    token = login_response.json()["access_token"]
 
-client = TestClient(app)
+    return {
+        "Authorization": f"Bearer {token}"
+    }
 
 
 def sample_payload():
@@ -60,10 +76,13 @@ def sample_payload():
     }
 
 
-def test_business_overview_api():
+def test_business_overview_api(client):
+    headers = get_auth_headers(client)
+
     response = client.post(
         "/analytics/business-overview",
-        json=sample_payload()
+        json=sample_payload(),
+        headers=headers
     )
 
     assert response.status_code == 200
@@ -84,16 +103,21 @@ def test_business_overview_api():
     assert overview["low_stock_products"] == 2
 
 
-def test_business_overview_missing_data():
+def test_business_overview_missing_data(client):
+    headers = get_auth_headers(client)
+
     response = client.post(
         "/analytics/business-overview",
-        json={"sales": []}
+        json={"sales": []},
+        headers=headers
     )
 
     assert response.status_code == 400
 
 
-def test_business_overview_invalid_sales():
+def test_business_overview_invalid_sales(client):
+    headers = get_auth_headers(client)
+
     payload = sample_payload()
     payload["sales"] = [
         {"order_id": 1}
@@ -101,7 +125,17 @@ def test_business_overview_invalid_sales():
 
     response = client.post(
         "/analytics/business-overview",
-        json=payload
+        json=payload,
+        headers=headers
     )
 
     assert response.status_code == 400
+
+
+def test_business_overview_without_token(client):
+    response = client.post(
+        "/analytics/business-overview",
+        json=sample_payload()
+    )
+
+    assert response.status_code == 401

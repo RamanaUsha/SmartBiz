@@ -47,6 +47,25 @@
             box-shadow: 0 2px 10px #0000000a;
         }
 
+        .auth-grid {
+            display: grid;
+            grid-template-columns: 2fr 2fr auto auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .auth-grid input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .auth-status {
+            margin-top: 12px;
+        }
+
         .input-grid, .summary-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -136,7 +155,9 @@
         }
 
         @media (max-width: 700px) {
-            .input-grid, .summary-grid {
+            .auth-grid,
+            .input-grid,
+            .summary-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -152,6 +173,55 @@
 
 <main>
 
+    <!-- Authentication -->
+    <section class="panel">
+        <h2>SmartBiz Account</h2>
+        <p>Register a new account or log in to access your dashboard.</p>
+
+        <div class="auth-grid">
+            <div>
+                <label for="authEmail">Email</label>
+                <input
+                    type="email"
+                    id="authEmail"
+                    placeholder="Enter your email"
+                    autocomplete="username"
+                    required
+                >
+            </div>
+
+            <div>
+                <label for="authPassword">Password</label>
+                <input
+                    type="password"
+                    id="authPassword"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
+
+            <button id="registerButton" onclick="registerUser()">
+                Create Account
+            </button>
+
+            <button id="loginButton" onclick="loginUser()">
+                Log In
+            </button>
+        </div>
+
+        <button
+            id="logoutButton"
+            class="hidden"
+            onclick="logoutUser()"
+        >
+            Log Out
+        </button>
+
+        <p id="authStatus" class="auth-status"></p>
+    </section>
+
+    <!-- Business Data -->
     <section class="panel">
         <h2>Business Data</h2>
         <p>Enter your sales and inventory records as JSON arrays.</p>
@@ -159,6 +229,7 @@
         <div class="input-grid">
             <div>
                 <h3>Sales Data</h3>
+
                 <textarea id="salesData">[
   {
     "order_id": 1,
@@ -189,6 +260,7 @@
 
             <div>
                 <h3>Inventory Data</h3>
+
                 <textarea id="inventoryData">[
   {
     "product_id": 101,
@@ -215,13 +287,18 @@
             </div>
         </div>
 
-        <button id="analyzeButton" onclick="analyzeBusiness()">
+        <button
+            id="analyzeButton"
+            onclick="analyzeBusiness()"
+            disabled
+        >
             Analyze Business
         </button>
 
         <p id="status"></p>
     </section>
 
+    <!-- Results -->
     <section id="results" class="hidden">
 
         <div class="panel">
@@ -262,6 +339,7 @@
 
         <div class="panel">
             <h2>Top-Selling Products</h2>
+
             <table>
                 <thead>
                     <tr>
@@ -270,12 +348,14 @@
                         <th>Revenue</th>
                     </tr>
                 </thead>
+
                 <tbody id="topProducts"></tbody>
             </table>
         </div>
 
         <div class="panel">
             <h2>Low-Stock Alerts</h2>
+
             <table>
                 <thead>
                     <tr>
@@ -284,6 +364,7 @@
                         <th>Reorder Level</th>
                     </tr>
                 </thead>
+
                 <tbody id="lowStockProducts"></tbody>
             </table>
         </div>
@@ -293,6 +374,12 @@
 </main>
 
 <script>
+
+    // JWT token is kept in memory only.
+    let accessToken = null;
+
+
+    // Currency formatting
     function formatCurrency(value) {
         return new Intl.NumberFormat("en-IN", {
             style: "currency",
@@ -301,21 +388,167 @@
         }).format(value);
     }
 
+
+    // Update authentication interface
+    function updateAuthUI() {
+        const loggedIn = accessToken !== null;
+
+        document.getElementById("registerButton").classList.toggle(
+            "hidden", loggedIn
+        );
+
+        document.getElementById("loginButton").classList.toggle(
+            "hidden", loggedIn
+        );
+
+        document.getElementById("logoutButton").classList.toggle(
+            "hidden", !loggedIn
+        );
+
+        document.getElementById("authEmail").disabled = loggedIn;
+        document.getElementById("authPassword").disabled = loggedIn;
+
+        document.getElementById("analyzeButton").disabled = !loggedIn;
+    }
+
+
+    // Register new user
+    async function registerUser() {
+        const status = document.getElementById("authStatus");
+
+        const email = document.getElementById("authEmail").value.trim();
+        const password = document.getElementById("authPassword").value;
+
+        if (!email || !password) {
+            status.className = "error";
+            status.textContent = "Please enter your email and password.";
+            return;
+        }
+
+        status.className = "";
+        status.textContent = "Creating your account...";
+
+        try {
+            const response = await fetch("/auth/register", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.detail || "Registration failed."
+                );
+            }
+
+            status.className = "success";
+            status.textContent =
+                "Account created successfully! Please log in.";
+
+            document.getElementById("authPassword").value = "";
+
+        } catch (error) {
+            status.className = "error";
+            status.textContent = error.message;
+        }
+    }
+
+
+    // Login user
+    async function loginUser() {
+        const status = document.getElementById("authStatus");
+
+        const email = document.getElementById("authEmail").value.trim();
+        const password = document.getElementById("authPassword").value;
+
+        if (!email || !password) {
+            status.className = "error";
+            status.textContent = "Please enter your email and password.";
+            return;
+        }
+
+        status.className = "";
+        status.textContent = "Logging in...";
+
+        try {
+            const response = await fetch("/auth/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.detail || "Login failed.");
+            }
+
+            accessToken = data.access_token;
+
+            document.getElementById("authPassword").value = "";
+
+            updateAuthUI();
+
+            status.className = "success";
+            status.textContent =
+                "Login successful! You can now analyze your business data.";
+
+        } catch (error) {
+            status.className = "error";
+            status.textContent = error.message;
+        }
+    }
+
+
+    // Logout user
+    function logoutUser() {
+        accessToken = null;
+
+        updateAuthUI();
+
+        document.getElementById("results").classList.add("hidden");
+
+        const status = document.getElementById("authStatus");
+        status.className = "success";
+        status.textContent = "You have logged out successfully.";
+
+        document.getElementById("status").textContent = "";
+    }
+
+
+    // Add table cell safely
     function addCell(row, value) {
         const cell = document.createElement("td");
         cell.textContent = value;
         row.appendChild(cell);
     }
 
+
+    // Analyze business data
     async function analyzeBusiness() {
+
         const button = document.getElementById("analyzeButton");
         const status = document.getElementById("status");
+
+        if (!accessToken) {
+            status.className = "error";
+            status.textContent =
+                "Please log in before analyzing business data.";
+            return;
+        }
 
         button.disabled = true;
         status.className = "";
         status.textContent = "Analyzing business data...";
 
         try {
+
             const sales = JSON.parse(
                 document.getElementById("salesData").value
             );
@@ -325,7 +558,9 @@
             );
 
             if (!Array.isArray(sales) || !Array.isArray(inventory)) {
-                throw new Error("Both inputs must be JSON arrays.");
+                throw new Error(
+                    "Both inputs must be JSON arrays."
+                );
             }
 
             const response = await fetch(
@@ -333,13 +568,28 @@
                 {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${accessToken}`
                     },
-                    body: JSON.stringify({ sales, inventory })
+                    body: JSON.stringify({
+                        sales,
+                        inventory
+                    })
                 }
             );
 
             const data = await response.json();
+
+            if (response.status === 401) {
+                accessToken = null;
+                updateAuthUI();
+
+                document.getElementById("results").classList.add("hidden");
+
+                throw new Error(
+                    "Your session is invalid or expired. Please log in again."
+                );
+            }
 
             if (!response.ok) {
                 throw new Error(
@@ -396,15 +646,25 @@
             document.getElementById("results").classList.remove("hidden");
 
             status.className = "success";
-            status.textContent = "Business analytics generated successfully.";
+            status.textContent =
+                "Business analytics generated successfully.";
 
         } catch (error) {
+
             status.className = "error";
             status.textContent = error.message;
+
         } finally {
-            button.disabled = false;
+
+            button.disabled = accessToken === null;
+
         }
     }
+
+
+    // Initialize authentication interface
+    updateAuthUI();
+
 </script>
 
 </body>

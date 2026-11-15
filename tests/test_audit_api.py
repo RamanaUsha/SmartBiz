@@ -1,7 +1,33 @@
 from app.services.audit_log_service import create_audit_log
 
 
+def get_auth_headers(client):
+    client.post(
+        "/auth/register",
+        json={
+            "email": "audit-test@example.com",
+            "password": "SecurePass123!"
+        }
+    )
+
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email": "audit-test@example.com",
+            "password": "SecurePass123!"
+        }
+    )
+
+    token = login_response.json()["access_token"]
+
+    return {
+        "Authorization": f"Bearer {token}"
+    }
+
+
 def test_get_audit_logs_api(client, db_session):
+    headers = get_auth_headers(client)
+
     comparison = {
         "original_rows": 10,
         "cleaned_rows": 8,
@@ -16,7 +42,10 @@ def test_get_audit_logs_api(client, db_session):
         comparison=comparison
     )
 
-    response = client.get("/audit-logs")
+    response = client.get(
+        "/audit-logs",
+        headers=headers
+    )
 
     assert response.status_code == 200
 
@@ -35,8 +64,19 @@ def test_get_audit_logs_api(client, db_session):
 
 
 def test_get_empty_audit_logs_api(client):
-    response = client.get("/audit-logs")
+    headers = get_auth_headers(client)
+
+    response = client.get(
+        "/audit-logs",
+        headers=headers
+    )
 
     assert response.status_code == 200
     assert response.json()["total_records"] == 0
     assert response.json()["audit_logs"] == []
+
+
+def test_get_audit_logs_without_token(client):
+    response = client.get("/audit-logs")
+
+    assert response.status_code == 401

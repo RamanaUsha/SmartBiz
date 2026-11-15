@@ -1,10 +1,35 @@
-
 from io import BytesIO
 
 from app.services.audit_log_service import get_audit_logs
 
 
+def get_auth_headers(client):
+    client.post(
+        "/auth/register",
+        json={
+            "email": "spreadsheet-audit-test@example.com",
+            "password": "SecurePass123!"
+        }
+    )
+
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email": "spreadsheet-audit-test@example.com",
+            "password": "SecurePass123!"
+        }
+    )
+
+    token = login_response.json()["access_token"]
+
+    return {
+        "Authorization": f"Bearer {token}"
+    }
+
+
 def test_clean_spreadsheet_creates_audit_log(client, db_session):
+    headers = get_auth_headers(client)
+
     content = (
         "name,email,city\n"
         " Usha ,usha@gmail.com,Chittoor\n"
@@ -14,6 +39,7 @@ def test_clean_spreadsheet_creates_audit_log(client, db_session):
 
     response = client.post(
         "/spreadsheets/clean-and-download",
+        headers=headers,
         params={"remove_duplicates": "true"},
         files={
             "file": (
@@ -44,6 +70,8 @@ def test_clean_spreadsheet_creates_audit_log(client, db_session):
 
 
 def test_clean_spreadsheet_without_duplicates(client, db_session):
+    headers = get_auth_headers(client)
+
     content = (
         "name,email\n"
         " Usha ,usha@gmail.com\n"
@@ -52,6 +80,7 @@ def test_clean_spreadsheet_without_duplicates(client, db_session):
 
     response = client.post(
         "/spreadsheets/clean-and-download",
+        headers=headers,
         files={
             "file": (
                 "customers.csv",
@@ -68,3 +97,23 @@ def test_clean_spreadsheet_without_duplicates(client, db_session):
     assert len(logs) == 1
     assert logs[0].rows_removed == 0
     assert logs[0].operations == ["trim_whitespace"]
+
+
+def test_clean_spreadsheet_without_token(client):
+    content = (
+        "name,email\n"
+        "Usha,usha@gmail.com\n"
+    )
+
+    response = client.post(
+        "/spreadsheets/clean-and-download",
+        files={
+            "file": (
+                "customers.csv",
+                BytesIO(content.encode("utf-8")),
+                "text/csv"
+            )
+        }
+    )
+
+    assert response.status_code == 401

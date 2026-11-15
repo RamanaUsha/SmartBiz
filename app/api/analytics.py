@@ -1,11 +1,12 @@
-
 import pandas as pd
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 
+from app.models.user_db import UserDB
 from app.services.analytics_service import (
     generate_business_analytics
 )
+from app.utils.auth import get_current_user
 
 
 router = APIRouter(
@@ -15,10 +16,14 @@ router = APIRouter(
 
 
 @router.post("/business-overview")
-def business_overview(payload: dict = Body(...)):
+def business_overview(
+    payload: dict = Body(...),
+    current_user: UserDB = Depends(get_current_user)
+):
     """
     Generate combined business analytics
     from sales and inventory records.
+    Requires JWT authentication.
     """
 
     try:
