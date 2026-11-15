@@ -134,3 +134,36 @@ Planned enhancements include:
 ## Author
 
 Python Automation & Backend Development Portfolio Project.
+
+## Before-and-After Comparison and Audit Logs
+
+SmartBiz now supports:
+
+- Comparing original and cleaned spreadsheet data.
+- Counting original and cleaned rows.
+- Tracking rows removed during cleaning.
+- Counting modified cells.
+- Recording cleaning operations performed on each spreadsheet.
+- Saving audit records in PostgreSQL.
+- Retrieving audit history through the `GET /audit-logs` API.
+
+### Spreadsheet Cleaning and Audit
+
+The `POST /spreadsheets/clean-and-download` endpoint cleans an uploaded CSV or Excel file and returns the cleaned data as an Excel file.
+
+It also creates an audit record containing:
+- Original filename
+- Cleaning operations
+- Original row count
+- Cleaned row count
+- Removed row count
+- Modified cell count
+- Audit timestamp
+
+### View Audit History
+
+Use:
+
+`GET /audit-logs`
+
+This endpoint returns the saved spreadsheet cleaning history.

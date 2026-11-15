@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from app.database import Base, DATABASE_URL, get_db
 from app.main import app
 from app.models.customer_db import CustomerDB
-
+from app.models.audit_log_db import AuditLogDB
 
 # Use the same PostgreSQL connection, but connect to the test database.
 TEST_DATABASE_URL = make_url(DATABASE_URL).set(
@@ -37,11 +37,13 @@ def setup_test_database():
 def db_session(setup_test_database):
     db = TestingSessionLocal()
 
+    db.query(AuditLogDB).delete()
     db.query(CustomerDB).delete()
     db.commit()
 
     yield db
 
+    db.query(AuditLogDB).delete()
     db.query(CustomerDB).delete()
     db.commit()
     db.close()

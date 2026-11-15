@@ -1,7 +1,16 @@
-from fastapi import APIRouter, File, HTTPException, UploadFile
 
+from io import BytesIO
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+
+from app.database import get_db
 from app.services.spreadsheet_service import read_spreadsheet
-from app.services.data_cleaning_service import clean_whitespace
+from app.services.data_cleaning_service import (
+    clean_whitespace,
+    clean_dataframe
+)
 from app.services.data_quality_service import (
     generate_data_overview,
     generate_missing_value_report,
@@ -9,19 +18,15 @@ from app.services.data_quality_service import (
     generate_invalid_email_report,
     calculate_data_quality_score
 )
-from io import BytesIO
-
-from fastapi.responses import StreamingResponse
-
-from app.services.data_cleaning_service import clean_dataframe
 from app.services.excel_export_service import export_cleaned_excel
+from app.services.data_comparison_service import compare_dataframes
+from app.services.audit_log_service import create_audit_log
 
 
 router = APIRouter(
     prefix="/spreadsheets",
     tags=["Spreadsheets"]
 )
-
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 
@@ -132,14 +137,17 @@ async def upload_spreadsheet(file: UploadFile = File(...)):
     finally:
         await file.close()
 
+
 @router.post("/clean-and-download")
 async def clean_and_download_spreadsheet(
     file: UploadFile = File(...),
-    remove_duplicates: bool = False
+    remove_duplicates: bool = False,
+    db: Session = Depends(get_db)
 ):
     """
     Upload a CSV or XLSX file, clean its data,
-    and return the cleaned spreadsheet as an Excel download.
+    record the cleaning operation, and return
+    the cleaned spreadsheet as an Excel download.
     """
 
     if not file.filename:
@@ -203,7 +211,24 @@ async def clean_and_download_spreadsheet(
             duplicate_columns=["email"] if remove_duplicates else None
         )
 
+        comparison = compare_dataframes(
+            dataframe,
+            cleaned_dataframe
+        )
+
+        operations = ["trim_whitespace"]
+
+        if remove_duplicates:
+            operations.append("remove_duplicates")
+
         excel_content = export_cleaned_excel(cleaned_dataframe)
+
+        create_audit_log(
+            db=db,
+            file_name=file.filename,
+            operations=operations,
+            comparison=comparison
+        )
 
         output_file = BytesIO(excel_content)
 
