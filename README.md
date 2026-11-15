@@ -1,27 +1,93 @@
 
 # SmartBiz – Business Data Automation Platform
 
-SmartBiz is a Python-based business data automation project designed to help small businesses manage and validate customer information through REST APIs.
+SmartBiz is a Python-based business data automation and analytics platform designed to help small businesses process, clean, validate, compare, and analyze their business data.
+
+The platform provides REST APIs and an interactive dashboard for managing customer information, processing spreadsheets, analyzing sales, monitoring inventory, and generating business insights.
 
 ## Current Features
 
-- Create customer records through a REST API.
+### 1. Customer Management
+- Create customer records through REST APIs.
 - Validate customer names, email addresses, and Indian mobile numbers.
 - Detect duplicate customer email addresses.
 - Store customer records in PostgreSQL.
-- Retrieve all stored customer records.
-- Separate API, service, database, and validation layers.
-- Automated tests using Pytest.
+- Retrieve stored customer records.
+
+### 2. Spreadsheet Processing
+- Import CSV and Excel files.
+- Read spreadsheet data using Pandas.
+- Detect missing values.
+- Clean unnecessary whitespace.
+- Detect duplicate records.
+- Identify invalid email addresses.
+- Validate uploaded file formats and sizes.
+
+### 3. Data Quality Analysis
+- Generate spreadsheet data overview reports.
+- Identify missing values.
+- Generate duplicate record reports.
+- Detect invalid email addresses.
+- Calculate a weighted data quality score.
+
+### 4. Advanced Data Cleaning and Excel Export
+- Configure whitespace cleaning.
+- Remove duplicate records.
+- Fill missing values.
+- Export cleaned data into Excel format.
+- Preserve original spreadsheet data during processing.
+
+### 5. Before-and-After Comparison and Audit Logs
+- Compare original and cleaned spreadsheet data.
+- Track original and cleaned row counts.
+- Identify removed rows.
+- Count modified cells.
+- Record cleaning operations.
+- Store audit history in PostgreSQL.
+- Retrieve audit records through REST APIs.
+
+### 6. Sales Management
+- Validate sales records and required columns.
+- Calculate revenue for individual sales records.
+- Generate sales summaries.
+- Calculate total orders.
+- Calculate total quantity sold.
+- Calculate total revenue and average order value.
+
+### 7. Inventory Management
+- Validate inventory records.
+- Calculate individual product inventory value.
+- Identify products at or below their reorder levels.
+- Generate inventory summaries.
+- Calculate total products, stock quantity, and inventory value.
+- Generate low-stock alerts.
+
+### 8. Business Analytics and Interactive Dashboard
+- Combine sales and inventory analytics.
+- Display total revenue and order counts.
+- Display total quantity sold.
+- Calculate total inventory value.
+- Identify top five selling products.
+- Generate low-stock alerts.
+- Provide an interactive HTML, CSS, and JavaScript dashboard.
+- Connect the dashboard directly to the FastAPI analytics endpoint.
 
 ## Technology Stack
 
-- **Language:** Python
-- **API Framework:** FastAPI
-- **Database:** PostgreSQL
-- **ORM:** SQLAlchemy
-- **Validation:** Pydantic
-- **Testing:** Pytest
-- **Excel Processing:** Pandas, OpenPyXL
+| Technology | Purpose |
+|---|---|
+| Python | Backend development |
+| FastAPI | REST API framework |
+| PostgreSQL | Relational database |
+| SQLAlchemy | Database ORM |
+| Pydantic | Data validation |
+| Pandas | Data processing and analysis |
+| OpenPyXL | Excel file processing |
+| Pytest | Automated testing |
+| HTTPX | API testing |
+| HTML | Dashboard structure |
+| CSS | Dashboard styling |
+| JavaScript | Dashboard interactions |
 
 ## Project Structure
 
@@ -29,8 +95,29 @@ SmartBiz is a Python-based business data automation project designed to help sma
 SmartBiz/
 ├── app/
 │   ├── api/
+│   │   ├── customer.py
+│   │   ├── spreadsheet.py
+│   │   ├── audit.py
+│   │   ├── sales.py
+│   │   ├── inventory.py
+│   │   └── analytics.py
 │   ├── models/
+│   │   ├── customer.py
+│   │   ├── customer_db.py
+│   │   └── audit_log_db.py
 │   ├── services/
+│   │   ├── customer_service.py
+│   │   ├── spreadsheet_service.py
+│   │   ├── data_cleaning_service.py
+│   │   ├── data_quality_service.py
+│   │   ├── excel_export_service.py
+│   │   ├── data_comparison_service.py
+│   │   ├── audit_log_service.py
+│   │   ├── sales_service.py
+│   │   ├── inventory_service.py
+│   │   └── analytics_service.py
+│   ├── static/
+│   │   └── index.html
 │   ├── utils/
 │   ├── database.py
 │   ├── init_db.py
@@ -39,7 +126,6 @@ SmartBiz/
 ├── data/
 ├── reports/
 ├── docs/
-├── .env
 ├── .gitignore
 ├── requirements.txt
 └── README.md
@@ -47,14 +133,14 @@ SmartBiz/
 
 ## Setup Instructions
 
-### 1. Clone the repository
+### 1. Clone the Repository
 
 ```bash
-git clone YOUR_GITHUB_REPOSITORY_URL
+git clone https://github.com/RamanaUsha/SmartBiz.git
 cd SmartBiz
 ```
 
-### 2. Create and activate a virtual environment
+### 2. Create a Virtual Environment
 
 Windows PowerShell:
 
@@ -63,13 +149,13 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 3. Install dependencies
+### 3. Install Dependencies
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment variables
+### 4. Configure Environment Variables
 
 Create a `.env` file in the project root:
 
@@ -79,113 +165,113 @@ DATABASE_URL=postgresql+psycopg2://postgres:YOUR_PASSWORD@localhost:5432/smartbi
 
 Replace `YOUR_PASSWORD` with your local PostgreSQL password.
 
-Create the PostgreSQL database named `smartbiz_db` before proceeding.
+Create a PostgreSQL database named `smartbiz_db` before proceeding.
 
-### 5. Create database tables
+Do not commit your `.env` file to GitHub.
+
+### 5. Initialize the Database
 
 ```powershell
 python -m app.init_db
 ```
 
-### 6. Start the API server
+### 6. Start the Application
 
 ```powershell
 uvicorn app.main:app --reload
 ```
 
-The API will be available at:
+## Application URLs
 
-http://127.0.0.1:8000
-
-Interactive API documentation:
-
-http://127.0.0.1:8000/docs
+| Resource | URL |
+|---|---|
+| API Root | http://127.0.0.1:8000/ |
+| Health Check | http://127.0.0.1:8000/health |
+| Interactive API Documentation | http://127.0.0.1:8000/docs |
+| Business Analytics Dashboard | http://127.0.0.1:8000/dashboard |
 
 ## API Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/` | Welcome message |
-| GET | `/health` | Health check |
 | POST | `/customers/` | Create a customer |
-| GET | `/customers/` | Retrieve all customers |
+| GET | `/customers/` | Retrieve customers |
+| POST | `/spreadsheets/upload` | Upload and analyze a spreadsheet |
+| POST | `/spreadsheets/clean-and-download` | Clean and export a spreadsheet |
+| GET | `/audit-logs` | Retrieve spreadsheet audit history |
+| POST | `/sales/analyze` | Analyze sales records |
+| POST | `/inventory/analyze` | Analyze inventory records |
+| POST | `/analytics/business-overview` | Generate combined business analytics |
 
-## Run Automated Tests
+## Business Analytics Dashboard
+
+The SmartBiz dashboard provides a visual interface for analyzing business data.
+
+### Dashboard Capabilities
+
+- Enter sales and inventory records as JSON.
+- Generate business analytics through the API.
+- View total revenue and orders.
+- Monitor inventory value.
+- Identify top-selling products.
+- Review low-stock alerts.
+
+### Running the Dashboard
+
+Start the FastAPI application:
+
+```powershell
+uvicorn app.main:app --reload
+```
+
+Open the dashboard:
+
+http://127.0.0.1:8000/dashboard
+
+The dashboard uses sample data that can be modified to test different business scenarios.
+
+## Automated Testing
+
+SmartBiz uses Pytest for automated service and API testing.
+
+Run the complete test suite:
 
 ```powershell
 pytest -v
 ```
 
-The project includes validation, service, and API tests.
+### Current Test Results
 
-## Development Status
+- Total automated tests: 75
+- Passed: 75
+- Failed: 0
 
-The current implementation includes customer validation, duplicate detection, PostgreSQL persistence, REST API endpoints, and automated tests.
+All 75 tests passed during the latest full test run.
 
-Planned enhancements include:
+## Development Roadmap
 
-- Excel and CSV data import.
-- Automated spreadsheet cleaning.
-- Data quality scoring.
-- Duplicate detection in business datasets.
-- Data cleaning reports and exports.
-- Business analytics dashboard.
+The following enhancements are planned for future development:
+
+- User authentication and authorization.
+- Role-based access control.
+- Improved API security.
+- Dashboard enhancements and visual charts.
+- Docker-based deployment.
+- Production deployment and monitoring.
+- Additional business reporting capabilities.
+
+## Project Status
+
+**Completed development milestones: 8 of 10**
+
+The project currently includes customer management, spreadsheet processing, data quality analysis, automated cleaning, audit logging, sales and inventory processing, and business analytics.
+
+Authentication, security improvements, deployment, and further production hardening remain future development tasks.
 
 ## Author
 
 Python Automation & Backend Development Portfolio Project.
 
-## Before-and-After Comparison and Audit Logs
+GitHub Repository:
 
-SmartBiz now supports:
-
-- Comparing original and cleaned spreadsheet data.
-- Counting original and cleaned rows.
-- Tracking rows removed during cleaning.
-- Counting modified cells.
-- Recording cleaning operations performed on each spreadsheet.
-- Saving audit records in PostgreSQL.
-- Retrieving audit history through the `GET /audit-logs` API.
-
-### Spreadsheet Cleaning and Audit
-
-The `POST /spreadsheets/clean-and-download` endpoint cleans an uploaded CSV or Excel file and returns the cleaned data as an Excel file.
-
-It also creates an audit record containing:
-- Original filename
-- Cleaning operations
-- Original row count
-- Cleaned row count
-- Removed row count
-- Modified cell count
-- Audit timestamp
-
-### View Audit History
-
-Use:
-
-`GET /audit-logs`
-
-This endpoint returns the saved spreadsheet cleaning history.
-
-## Sales and Inventory Management
-
-SmartBiz now supports sales and inventory data processing.
-
-### Sales Features
-- Validate sales data and required columns.
-- Calculate revenue for individual sales records.
-- Generate sales summaries.
-- Calculate total orders, quantity sold, total revenue, and average order value.
-- REST API endpoint: `POST /sales/analyze`
-
-### Inventory Features
-- Validate inventory data and required columns.
-- Calculate individual product inventory value.
-- Identify products at or below their reorder level.
-- Generate inventory summaries.
-- Calculate total products, stock quantity, inventory value, and low-stock product count.
-- REST API endpoint: `POST /inventory/analyze`
-
-### Testing
-Sales and inventory services and APIs include automated tests.
+https://github.com/RamanaUsha/SmartBiz

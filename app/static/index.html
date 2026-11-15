@@ -1,0 +1,411 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartBiz | Business Dashboard</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f3f5f9;
+            color: #202938;
+        }
+
+        header {
+            background: #172554;
+            color: white;
+            padding: 24px 6%;
+        }
+
+        header h1 {
+            margin: 0 0 6px;
+        }
+
+        header p {
+            margin: 0;
+            color: #cbd5e1;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .panel {
+            background: white;
+            padding: 22px;
+            border-radius: 12px;
+            margin-bottom: 22px;
+            box-shadow: 0 2px 10px #0000000a;
+        }
+
+        .input-grid, .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .summary-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 230px;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 13px;
+            resize: vertical;
+        }
+
+        button {
+            margin-top: 18px;
+            padding: 12px 22px;
+            border: none;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .metric {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .metric p {
+            margin: 0 0 10px;
+            color: #64748b;
+        }
+
+        .metric h2 {
+            margin: 0;
+            font-size: 25px;
+        }
+
+        .error {
+            color: #b91c1c;
+            margin-top: 15px;
+        }
+
+        .success {
+            color: #15803d;
+            margin-top: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            background: #f8fafc;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 700px) {
+            .input-grid, .summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>SmartBiz</h1>
+    <p>Business Data Analytics Dashboard</p>
+</header>
+
+<main>
+
+    <section class="panel">
+        <h2>Business Data</h2>
+        <p>Enter your sales and inventory records as JSON arrays.</p>
+
+        <div class="input-grid">
+            <div>
+                <h3>Sales Data</h3>
+                <textarea id="salesData">[
+  {
+    "order_id": 1,
+    "product_name": "Laptop",
+    "quantity": 2,
+    "unit_price": 50000
+  },
+  {
+    "order_id": 2,
+    "product_name": "Mouse",
+    "quantity": 5,
+    "unit_price": 500
+  },
+  {
+    "order_id": 3,
+    "product_name": "Keyboard",
+    "quantity": 3,
+    "unit_price": 1500
+  },
+  {
+    "order_id": 4,
+    "product_name": "Mouse",
+    "quantity": 4,
+    "unit_price": 500
+  }
+]</textarea>
+            </div>
+
+            <div>
+                <h3>Inventory Data</h3>
+                <textarea id="inventoryData">[
+  {
+    "product_id": 101,
+    "product_name": "Laptop",
+    "quantity": 10,
+    "unit_cost": 40000,
+    "reorder_level": 5
+  },
+  {
+    "product_id": 102,
+    "product_name": "Mouse",
+    "quantity": 3,
+    "unit_cost": 300,
+    "reorder_level": 5
+  },
+  {
+    "product_id": 103,
+    "product_name": "Keyboard",
+    "quantity": 5,
+    "unit_cost": 1000,
+    "reorder_level": 5
+  }
+]</textarea>
+            </div>
+        </div>
+
+        <button id="analyzeButton" onclick="analyzeBusiness()">
+            Analyze Business
+        </button>
+
+        <p id="status"></p>
+    </section>
+
+    <section id="results" class="hidden">
+
+        <div class="panel">
+            <h2>Business Overview</h2>
+
+            <div class="summary-grid">
+                <div class="metric">
+                    <p>Total Revenue</p>
+                    <h2 id="revenue">-</h2>
+                </div>
+
+                <div class="metric">
+                    <p>Total Orders</p>
+                    <h2 id="orders">-</h2>
+                </div>
+
+                <div class="metric">
+                    <p>Quantity Sold</p>
+                    <h2 id="quantity">-</h2>
+                </div>
+
+                <div class="metric">
+                    <p>Total Products</p>
+                    <h2 id="products">-</h2>
+                </div>
+
+                <div class="metric">
+                    <p>Inventory Value</p>
+                    <h2 id="inventoryValue">-</h2>
+                </div>
+
+                <div class="metric">
+                    <p>Low-Stock Products</p>
+                    <h2 id="lowStockCount">-</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Top-Selling Products</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Quantity Sold</th>
+                        <th>Revenue</th>
+                    </tr>
+                </thead>
+                <tbody id="topProducts"></tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <h2>Low-Stock Alerts</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Available Quantity</th>
+                        <th>Reorder Level</th>
+                    </tr>
+                </thead>
+                <tbody id="lowStockProducts"></tbody>
+            </table>
+        </div>
+
+    </section>
+
+</main>
+
+<script>
+    function formatCurrency(value) {
+        return new Intl.NumberFormat("en-IN", {
+            style: "currency",
+            currency: "INR",
+            maximumFractionDigits: 2
+        }).format(value);
+    }
+
+    function addCell(row, value) {
+        const cell = document.createElement("td");
+        cell.textContent = value;
+        row.appendChild(cell);
+    }
+
+    async function analyzeBusiness() {
+        const button = document.getElementById("analyzeButton");
+        const status = document.getElementById("status");
+
+        button.disabled = true;
+        status.className = "";
+        status.textContent = "Analyzing business data...";
+
+        try {
+            const sales = JSON.parse(
+                document.getElementById("salesData").value
+            );
+
+            const inventory = JSON.parse(
+                document.getElementById("inventoryData").value
+            );
+
+            if (!Array.isArray(sales) || !Array.isArray(inventory)) {
+                throw new Error("Both inputs must be JSON arrays.");
+            }
+
+            const response = await fetch(
+                "/analytics/business-overview",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ sales, inventory })
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.detail || "Unable to analyze business data."
+                );
+            }
+
+            const overview = data.business_overview;
+
+            document.getElementById("revenue").textContent =
+                formatCurrency(overview.total_revenue);
+
+            document.getElementById("orders").textContent =
+                overview.total_orders;
+
+            document.getElementById("quantity").textContent =
+                overview.total_quantity_sold;
+
+            document.getElementById("products").textContent =
+                overview.total_products;
+
+            document.getElementById("inventoryValue").textContent =
+                formatCurrency(overview.total_inventory_value);
+
+            document.getElementById("lowStockCount").textContent =
+                overview.low_stock_products;
+
+            const topBody = document.getElementById("topProducts");
+            topBody.replaceChildren();
+
+            data.top_selling_products.forEach(product => {
+                const row = document.createElement("tr");
+
+                addCell(row, product.product_name);
+                addCell(row, product.quantity_sold);
+                addCell(row, formatCurrency(product.total_revenue));
+
+                topBody.appendChild(row);
+            });
+
+            const lowBody = document.getElementById("lowStockProducts");
+            lowBody.replaceChildren();
+
+            data.low_stock_alerts.forEach(product => {
+                const row = document.createElement("tr");
+
+                addCell(row, product.product_name);
+                addCell(row, product.quantity);
+                addCell(row, product.reorder_level);
+
+                lowBody.appendChild(row);
+            });
+
+            document.getElementById("results").classList.remove("hidden");
+
+            status.className = "success";
+            status.textContent = "Business analytics generated successfully.";
+
+        } catch (error) {
+            status.className = "error";
+            status.textContent = error.message;
+        } finally {
+            button.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>

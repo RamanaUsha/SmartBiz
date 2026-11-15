@@ -5,6 +5,11 @@ from app.api.spreadsheet import router as spreadsheet_router
 from app.api.audit import router as audit_router
 from app.api.sales import router as sales_router
 from app.api.inventory import router as inventory_router
+from app.api.analytics import router as analytics_router
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 
 app = FastAPI(
     title="SmartBiz API",
@@ -17,6 +22,7 @@ app.include_router(spreadsheet_router)
 app.include_router(audit_router)
 app.include_router(sales_router)
 app.include_router(inventory_router)
+app.include_router(analytics_router)
 
 @app.get("/")
 def home():
@@ -31,3 +37,15 @@ def health_check():
     return {
         "status": "healthy"
     }
+BASE_DIR = Path(__file__).resolve().parent
+
+app.mount(
+    "/static",
+    StaticFiles(directory=BASE_DIR / "static"),
+    name="static"
+)
+
+
+@app.get("/dashboard", include_in_schema=False)
+def dashboard():
+    return FileResponse(BASE_DIR / "static" / "index.html")
