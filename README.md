@@ -167,3 +167,25 @@ Use:
 `GET /audit-logs`
 
 This endpoint returns the saved spreadsheet cleaning history.
+
+## Sales and Inventory Management
+
+SmartBiz now supports sales and inventory data processing.
+
+### Sales Features
+- Validate sales data and required columns.
+- Calculate revenue for individual sales records.
+- Generate sales summaries.
+- Calculate total orders, quantity sold, total revenue, and average order value.
+- REST API endpoint: `POST /sales/analyze`
+
+### Inventory Features
+- Validate inventory data and required columns.
+- Calculate individual product inventory value.
+- Identify products at or below their reorder level.
+- Generate inventory summaries.
+- Calculate total products, stock quantity, inventory value, and low-stock product count.
+- REST API endpoint: `POST /inventory/analyze`
+
+### Testing
+Sales and inventory services and APIs include automated tests.
